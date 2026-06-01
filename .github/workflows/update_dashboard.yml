@@ -2,7 +2,7 @@ name: Update Weeek Dashboard
 
 on:
   schedule:
-    - cron: '0 6 * * 1'  # каждый понедельник в 09:00 МСК (06:00 UTC)
+    - cron: '0 6 * * *'  # каждый день в 09:00 МСК (06:00 UTC)
   workflow_dispatch:       # ручной запуск из GitHub UI
 
 permissions:
@@ -37,6 +37,7 @@ jobs:
 
       - name: Send Telegram notification
         env:
+          WEEEK_API_KEY: ${{ secrets.WEEEK_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python send_telegram.py
