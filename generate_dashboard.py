@@ -11,10 +11,10 @@ COLS     = [6717, 6718, 6719, 6726, 10039]
 
 COL_NAMES = {
     6717:  "Backlog",
-    6718:  "V rabote",
-    6719:  "Sdelali (SPRY)",
-    6726:  "Ne realizovannye",
-    10039: "Protokolnye",
+    6718:  "В работе",
+    6719:  "Сделали (SPRY)",
+    6726:  "Не реализованные",
+    10039: "Протокольные",
 }
 
 USERS = {
@@ -54,26 +54,56 @@ HEADERS = {
 
 
 def fetch_column(col_id):
-    tasks = []
+    задач = []
     offset = 0
     while True:
         r = requests.get(
-            BASE_URL + "/tm/tasks",
+            BASE_URL + "/tm/задач",
             headers=HEADERS,
             params={"boardId": BOARD_ID, "boardColumnId": col_id, "limit": 50, "offset": offset},
             timeout=15,
         )
         if r.status_code != 200:
             break
-        batch = r.json().get("tasks", [])
-        tasks.extend(batch)
+        batch = r.json().get("задач", [])
+        задач.extend(batch)
         if len(batch) < 50:
             break
         offset += 50
-    return tasks
+    return задач
 
+
+# Кэш участников — обновляется из API при первом запросе
+_members_cache = {}
+
+def load_members():
+    """Загружает список участников воркспейса из Weeek API"""
+    global _members_cache
+    if _members_cache:
+        return
+    try:
+        r = requests.get(
+            BASE_URL + "/ws/members",
+            headers=HEADERS,
+            timeout=10,
+        )
+        if r.status_code == 200:
+            members = r.json().get("members", [])
+            for m in members:
+                uid = m.get("id", "")
+                first = m.get("firstName", "")
+                last  = m.get("lastName", "")
+                name  = (last + " " + first[0] + ".").strip() if first else last
+                if uid and name:
+                    _members_cache[uid] = name
+    except Exception:
+        pass
 
 def user_name(uid):
+    """Возвращает имя пользователя: сначала из API, затем из статического словаря"""
+    load_members()
+    if uid in _members_cache:
+        return _members_cache[uid]
     return USERS.get(uid, uid[:8] + "...")
 
 
@@ -118,18 +148,18 @@ def overdue_rows_html(overdue_sorted):
     return "\n".join(rows)
 
 
-def build_html(tasks, generated_at):
+def build_html(задач, generated_at):
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    total   = len(tasks)
-    closed  = [t for t in tasks if t.get("isCompleted")]
-    opened  = [t for t in tasks if not t.get("isCompleted")]
+    total   = len(задач)
+    closed  = [t for t in задач if t.get("isCompleted")]
+    opened  = [t for t in задач if not t.get("isCompleted")]
     overdue = [t for t in opened if t.get("dueDate") and t["dueDate"] < today]
     no_due  = [t for t in opened if not t.get("dueDate")]
 
     assignee_all     = {}
     assignee_overdue = {}
-    for t in tasks:
+    for t in задач:
         is_over = not t.get("isCompleted") and t.get("dueDate") and t["dueDate"] < today
         for uid in t.get("assignees", []):
             assignee_all[uid]     = assignee_all.get(uid, 0) + 1
@@ -144,7 +174,7 @@ def build_html(tasks, generated_at):
     col_total  = {c: 0 for c in COLS}
     col_open   = {c: 0 for c in COLS}
     col_closed = {c: 0 for c in COLS}
-    for t in tasks:
+    for t in задач:
         c = t.get("boardColumnId")
         if c in col_total:
             col_total[c] += 1
@@ -165,7 +195,7 @@ def build_html(tasks, generated_at):
     overdue_sorted = sorted(overdue, key=lambda t: t.get("dueDate", ""))
 
     bars_all     = bar_rows_html(top_all,     max_all, "#B5D4F4", "#0C447C")
-    bars_overdue = bar_rows_html(top_overdue, max_ovd, "#F7C1C1", "#A32D2D") if top_overdue else "<p style='font-size:13px;color:#aaa;'>No overdue tasks</p>"
+    bars_overdue = bar_rows_html(top_overdue, max_ovd, "#F7C1C1", "#A32D2D") if top_overdue else "<p style='font-size:13px;color:#aaa;'>No overdue задач</p>"
     overdue_table = ""
     if overdue:
         overdue_table = (
@@ -177,7 +207,7 @@ def build_html(tasks, generated_at):
             "</table>"
         )
     else:
-        overdue_table = "<p style='font-size:13px;color:#aaa;'>No overdue tasks</p>"
+        overdue_table = "<p style='font-size:13px;color:#aaa;'>No overdue задач</p>"
 
     html = """<!DOCTYPE html>
 <html lang="ru">
@@ -214,53 +244,53 @@ tr:hover td{background:#fafaf8;}
 <div class="header">
   <div>
     <div class="header-title">Plechi 2026 (SCRUM) Dashboard</div>
-    <div class="header-sub">Updated: GENERATED_AT | Total tasks: TOTAL_COUNT</div>
+    <div class="header-sub">Обновлено: GENERATED_AT | Всего задач: TOTAL_COUNT</div>
   </div>
-  <a class="header-link" href="https://app.weeek.net/ws/544168/project/204/board/2074" target="_blank">Open board</a>
+  <a class="header-link" href="https://app.weeek.net/ws/544168/project/204/board/2074" target="_blank">Открыть доску</a>
 </div>
 <div class="metrics">
   <div class="metric">
-    <div class="metric-label"><span class="dot" style="background:#639922;"></span>Closed</div>
+    <div class="metric-label"><span class="dot" style="background:#639922;"></span>Закрыто</div>
     <div class="metric-value" style="color:#3B6D11;">CLOSED_COUNT</div>
-    <div class="metric-sub">PCT_CLOSED% of all tasks</div>
+    <div class="metric-sub">PCT_CLOSED% всех задач</div>
   </div>
   <div class="metric">
-    <div class="metric-label"><span class="dot" style="background:#378ADD;"></span>In progress</div>
+    <div class="metric-label"><span class="dot" style="background:#378ADD;"></span>В работе / открыто</div>
     <div class="metric-value" style="color:#185FA5;">OPEN_COUNT</div>
-    <div class="metric-sub">PCT_OPEN% of all tasks</div>
+    <div class="metric-sub">PCT_OPEN% всех задач</div>
   </div>
   <div class="metric">
-    <div class="metric-label"><span class="dot" style="background:#E24B4A;"></span>Overdue</div>
+    <div class="metric-label"><span class="dot" style="background:#E24B4A;"></span>Просрочено</div>
     <div class="metric-value" style="color:#A32D2D;">OVERDUE_COUNT</div>
-    <div class="metric-sub">PCT_OVERDUE% of open</div>
+    <div class="metric-sub">PCT_OVERDUE% открытых</div>
   </div>
   <div class="metric">
-    <div class="metric-label"><span class="dot" style="background:#888;"></span>No due date</div>
+    <div class="metric-label"><span class="dot" style="background:#888;"></span>Без срока</div>
     <div class="metric-value" style="color:#5F5E5A;">NODUE_COUNT</div>
-    <div class="metric-sub">no deadline</div>
+    <div class="metric-sub">нет дедлайна</div>
   </div>
 </div>
 <div class="grid2">
   <div class="card">
-    <div class="card-title">Workload by assignee</div>
+    <div class="card-title">Нагрузка по исполнителям</div>
     BARS_ALL
   </div>
   <div class="card">
-    <div class="card-title"><span class="dot" style="background:#E24B4A;"></span>Overdue by assignee</div>
+    <div class="card-title"><span class="dot" style="background:#E24B4A;"></span>Просрочки по исполнителям</div>
     BARS_OVERDUE
   </div>
 </div>
 <div class="card">
-  <div class="card-title"><span class="dot" style="background:#E24B4A;"></span>Overdue tasks (OVERDUE_COUNT)</div>
+  <div class="card-title"><span class="dot" style="background:#E24B4A;"></span>Просроченные задачи (OVERDUE_COUNT)</div>
   OVERDUE_TABLE
 </div>
 <div class="grid2">
   <div class="card">
-    <div class="card-title">Tasks by column</div>
+    <div class="card-title">Задачи по колонкам</div>
     <div style="position:relative;height:200px;"><canvas id="colChart"></canvas></div>
   </div>
   <div class="card">
-    <div class="card-title">Open / Closed by column</div>
+    <div class="card-title">Open / Закрыто by column</div>
     <div style="position:relative;height:200px;"><canvas id="statusChart"></canvas></div>
   </div>
 </div>
@@ -279,8 +309,8 @@ new Chart(document.getElementById('colChart'), {
 new Chart(document.getElementById('statusChart'), {
   type:'bar',
   data:{labels:colLabels,datasets:[
-    {label:'Open',data:COL_OPEN,backgroundColor:'#85B7EB',borderRadius:3},
-    {label:'Closed',data:COL_CLOSED,backgroundColor:'#97C459',borderRadius:3}
+    {label:'Открыто',data:COL_OPEN,backgroundColor:'#85B7EB',borderRadius:3},
+    {label:'Закрыто',data:COL_CLOSED,backgroundColor:'#97C459',borderRadius:3}
   ]},
   options:{responsive:true,maintainAspectRatio:false,
     plugins:{legend:{display:true,position:'top',labels:{color:tc,font:{size:11},boxWidth:10,padding:8}}},
@@ -315,21 +345,21 @@ new Chart(document.getElementById('statusChart'), {
 
 
 def main():
-    print("Loading tasks from Weeek...")
-    all_tasks = []
+    print("Загружаю задачи из Weeek...")
+    all_задач = []
     for col in COLS:
         batch = fetch_column(col)
-        print("  Column " + COL_NAMES[col] + ": " + str(len(batch)) + " tasks")
-        all_tasks.extend(batch)
-    print("Total: " + str(len(all_tasks)) + " tasks")
+        print("  Column " + COL_NAMES[col] + ": " + str(len(batch)) + " задач")
+        all_задач.extend(batch)
+    print("Всего: " + str(len(all_задач)) + " задач")
 
     generated_at = datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
-    html = build_html(all_tasks, generated_at)
+    html = build_html(all_задач, generated_at)
 
     os.makedirs("output", exist_ok=True)
     with open("output/index.html", "w", encoding="utf-8") as f:
         f.write(html)
-    print("Dashboard saved to output/index.html")
+    print("Дашборд сохранён в output/index.html")
 
 
 if __name__ == "__main__":
