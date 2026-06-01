@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Плечи 2026 — Дашборд</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f0;color:#1a1a18;line-height:1.5;}
+.container{max-width:1100px;margin:0 auto;padding:24px 16px;}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.header-title{font-size:20px;font-weight:600;}
+.header-sub{font-size:12px;color:#888;margin-top:3px;}
+.header-link{font-size:13px;color:#185FA5;text-decoration:none;border:1px solid #B5D4F4;padding:6px 14px;border-radius:6px;}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.metric{background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e8e6e0;}
+.metric-label{font-size:12px;color:#888;margin-bottom:4px;}
+.metric-value{font-size:30px;font-weight:600;}
+.metric-sub{font-size:11px;color:#aaa;margin-top:3px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.card{background:#fff;border-radius:10px;padding:16px 18px;border:1px solid #e8e6e0;margin-bottom:16px;}
+.card-title{font-size:14px;font-weight:600;margin-bottom:14px;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:11px;font-weight:600;color:#888;text-align:left;padding:6px 8px;border-bottom:2px solid #e8e6e0;text-transform:uppercase;letter-spacing:.04em;}
+tr:hover td{background:#fafaf8;}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle;}
+@media(max-width:640px){.metrics{grid-template-columns:1fr 1fr;}.grid2{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+  <div>
+    <div class="header-title">Плечи 2026 (SCRUM) — Дашборд</div>
+    <div class="header-sub">Обновлено: 01.06.2026 13:17 UTC | Всего задач: 73</div>
+  </div>
+  <a class="header-link" href="https://app.weeek.net/ws/544168/project/204/board/2074" target="_blank">Открыть доску</a>
+</div>
+<div class="metrics">
+  <div class="metric">
+    <div class="metric-label"><span class="dot" style="background:#639922;"></span>Закрыто</div>
+    <div class="metric-value" style="color:#3B6D11;">39</div>
+    <div class="metric-sub">53% всех задач</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label"><span class="dot" style="background:#378ADD;"></span>В работе</div>
+    <div class="metric-value" style="color:#185FA5;">34</div>
+    <div class="metric-sub">47% всех задач</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label"><span class="dot" style="background:#E24B4A;"></span>Просрочено</div>
+    <div class="metric-value" style="color:#A32D2D;">0</div>
+    <div class="metric-sub">0% открытых</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label"><span class="dot" style="background:#888;"></span>Без срока</div>
+    <div class="metric-value" style="color:#5F5E5A;">0</div>
+    <div class="metric-sub">нет дедлайна</div>
+  </div>
+</div>
+<div class="grid2">
+  <div class="card">
+    <div class="card-title">Нагрузка по исполнителям</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="width:160px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="Михайловский В.С.">Михайловский В.С.</span><div style="flex:1;background:#f0f0ee;border-radius:3px;height:18px;"><div style="width:100%;background:#B5D4F4;border-radius:3px;height:100%;display:flex;align-items:center;padding-left:6px;min-width:22px;"><span style="font-size:11px;font-weight:600;color:#0C447C;">22</span></div></div></div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="width:160px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="Разборов И.В.">Разборов И.В.</span><div style="flex:1;background:#f0f0ee;border-radius:3px;height:18px;"><div style="width:77%;background:#B5D4F4;border-radius:3px;height:100%;display:flex;align-items:center;padding-left:6px;min-width:22px;"><span style="font-size:11px;font-weight:600;color:#0C447C;">17</span></div></div></div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="width:160px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="Теньков Ю.В.">Теньков Ю.В.</span><div style="flex:1;background:#f0f0ee;border-radius:3px;height:18px;"><div style="width:73%;background:#B5D4F4;border-radius:3px;height:100%;display:flex;align-items:center;padding-left:6px;min-width:22px;"><span style="font-size:11px;font-weight:600;color:#0C447C;">16</span></div></div></div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="width:160px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="Буков Д.С.">Буков Д.С.</span><div style="flex:1;background:#f0f0ee;border-radius:3px;height:18px;"><div style="width:64%;background:#B5D4F4;border-radius:3px;height:100%;display:flex;align-items:center;padding-left:6px;min-width:22px;"><span style="font-size:11px;font-weight:600;color:#0C447C;">14</span></div></div></div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="width:160px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="Сандаков Э.Г.">Сандаков Э.Г.</span><div style="flex:1;background:#f0f0ee;border-radius:3px;height:18px;"><div style="width:36%;background:#B5D4F4;border-radius:3px;height:100%;display:flex;align-items:center;padding-left:6px;min-width:22px;"><span style="font-size:11px;font-weight:600;color:#0C447C;">8</span></div></div></div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="width:160px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="Мукимов А.Р.">Мукимов А.Р.</span><div style="flex:1;background:#f0f0ee;border-radius:3px;height:18px;"><div style="width:32%;background:#B5D4F4;border-radius:3px;height:100%;display:flex;align-items:center;padding-left:6px;min-width:22px;"><span style="font-size:11px;font-weight:600;color:#0C447C;">7</span></div></div></div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="width:160px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="Овакимян В.В.">Овакимян В.В.</span><div style="flex:1;background:#f0f0ee;border-radius:3px;height:18px;"><div style="width:18%;background:#B5D4F4;border-radius:3px;height:100%;display:flex;align-items:center;padding-left:6px;min-width:22px;"><span style="font-size:11px;font-weight:600;color:#0C447C;">4</span></div></div></div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="width:160px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="Школьников Г.Н.">Школьников Г.Н.</span><div style="flex:1;background:#f0f0ee;border-radius:3px;height:18px;"><div style="width:18%;background:#B5D4F4;border-radius:3px;height:100%;display:flex;align-items:center;padding-left:6px;min-width:22px;"><span style="font-size:11px;font-weight:600;color:#0C447C;">4</span></div></div></div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="width:160px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="Макаров Ю.В.">Макаров Ю.В.</span><div style="flex:1;background:#f0f0ee;border-radius:3px;height:18px;"><div style="width:18%;background:#B5D4F4;border-radius:3px;height:100%;display:flex;align-items:center;padding-left:6px;min-width:22px;"><span style="font-size:11px;font-weight:600;color:#0C447C;">4</span></div></div></div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="width:160px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="Залунин Ю.В.">Залунин Ю.В.</span><div style="flex:1;background:#f0f0ee;border-radius:3px;height:18px;"><div style="width:14%;background:#B5D4F4;border-radius:3px;height:100%;display:flex;align-items:center;padding-left:6px;min-width:22px;"><span style="font-size:11px;font-weight:600;color:#0C447C;">3</span></div></div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:#E24B4A;"></span>Просрочки по исполнителям</div>
+    <p style='font-size:13px;color:#aaa;'>Просроченных задач нет</p>
+  </div>
+</div>
+<div class="card">
+  <div class="card-title"><span class="dot" style="background:#E24B4A;"></span>Просроченные задачи (0)</div>
+  <p style='font-size:13px;color:#aaa;'>Просроченных задач нет</p>
+</div>
+<div class="grid2">
+  <div class="card">
+    <div class="card-title">Задачи по колонкам</div>
+    <div style="position:relative;height:200px;"><canvas id="colChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Открытые / закрытые по колонкам</div>
+    <div style="position:relative;height:200px;"><canvas id="statusChart"></canvas></div>
+  </div>
+</div>
+</div>
+<script>
+var colLabels = ["Backlog", "\u0412 \u0440\u0430\u0431\u043e\u0442\u0435", "\u0421\u0434\u0435\u043b\u0430\u043b\u0438 (SPRY)", "\u041d\u0435 \u0440\u0435\u0430\u043b\u0438\u0437\u043e\u0432\u0430\u043d\u043d\u044b\u0435", "\u041f\u0440\u043e\u0442\u043e\u043a\u043e\u043b\u044c\u043d\u044b\u0435"];
+var tc = '#888780', gc = 'rgba(0,0,0,0.05)';
+new Chart(document.getElementById('colChart'), {
+  type:'doughnut',
+  data:{labels:colLabels,datasets:[{data:[18, 16, 20, 19, 0],
+    backgroundColor:['#B5D4F4','#9FE1CB','#C0DD97','#FAC775','#F5C4B3'],
+    borderColor:['#378ADD','#1D9E75','#639922','#BA7517','#D85A30'],borderWidth:1.5}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'right',labels:{color:tc,font:{size:11},boxWidth:10,padding:6}}}}
+});
+new Chart(document.getElementById('statusChart'), {
+  type:'bar',
+  data:{labels:colLabels,datasets:[
+    {label:'Открыто',data:[18, 16, 0, 0, 0],backgroundColor:'#85B7EB',borderRadius:3},
+    {label:'Закрыто',data:[0, 0, 20, 19, 0],backgroundColor:'#97C459',borderRadius:3}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'top',labels:{color:tc,font:{size:11},boxWidth:10,padding:8}}},
+    scales:{
+      x:{stacked:true,ticks:{color:tc,font:{size:10},maxRotation:20},grid:{display:false}},
+      y:{stacked:true,ticks:{color:tc,font:{size:11},stepSize:5},grid:{color:gc}}
+    }
+  }
+});
+</script>
+</body>
+</html>
