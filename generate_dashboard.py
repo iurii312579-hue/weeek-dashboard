@@ -8,8 +8,8 @@ API_KEY  = os.environ["WEEEK_API_KEY"]
 BASE_URL = "https://api.weeek.net/public/v1"
 HEADERS  = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
-TIMEOUT    = 10          # секунд на каждый запрос
-MAX_PAGES  = 20          # защита от бесконечной пагинации
+TIMEOUT   = 10
+MAX_PAGES = 50
 
 WS_ID      = 544168
 PROJECT_ID = 204
@@ -23,7 +23,6 @@ COL_NAMES = {
     6726:  "Не реализованные",
     10039: "Протокольные",
 }
-
 CLOSED_COL_IDS = {6719, 6726, 10039}
 
 # ── Участники ─────────────────────────────────────────────────────────────────
@@ -31,11 +30,7 @@ def load_members():
     print("Загружаю участников...", flush=True)
     members = {}
     try:
-        r = requests.get(
-            f"{BASE_URL}/ws/members",
-            headers=HEADERS,
-            timeout=TIMEOUT
-        )
+        r = requests.get(f"{BASE_URL}/ws/members", headers=HEADERS, timeout=TIMEOUT)
         r.raise_for_status()
         data = r.json()
         print(f"  Ответ API участников: {list(data.keys())}", flush=True)
@@ -87,26 +82,61 @@ def load_tasks():
                 )
                 r.raise_for_status()
                 data  = r.json()
+
+                # Отладка структуры ответа на первой странице
+                if page == 1:
+                    keys = list(data.keys())
+                    print(f"    Ключи ответа: {keys}", flush=True)
+
                 batch = data.get("tasks", [])
                 for t in batch:
                     t["_col_id"] = col_id
                 tasks.extend(batch)
-                print(f"    стр.{page}: {len(batch)} задач", flush=True)
-                # Проверяем оба возможных поля пагинации
-                has_more = data.get("hasMore") or data.get("has_more") or False
-                if not has_more or not batch:
+                print(f"    стр.{page}: {len(batch)} задач (всего в колонке пока: {sum(1 for t in tasks if t['_col_id']==col_id)})", flush=True)
+
+                # Останавливаемся если пришло меньше ожидаемого (последняя страница)
+                if len(batch) == 0:
+                    print(f"    Пустая страница — конец колонки", flush=True)
                     break
+
+                # Проверяем все возможные поля пагинации
+                has_more = (
+                    data.get("hasMore")
+                    or data.get("has_more")
+                    or data.get("next_page")
+                    or False
+                )
+                if not has_more:
+                    print(f"    hasMore=False — конец колонки", flush=True)
+                    break
+
                 page += 1
+
             except requests.exceptions.Timeout:
-                print(f"    ОШИБКА: таймаут на стр.{page}, пропускаю", flush=True)
+                print(f"    ОШИБКА: таймаут на стр.{page}, пропускаю колонку", flush=True)
                 break
             except Exception as e:
-                print(f"    ОШИБКА: {e}, пропускаю", flush=True)
+                print(f"    ОШИБКА: {e}, пропускаю колонку", flush=True)
                 break
+
     return tasks
 
 
 # ── Аналитика ─────────────────────────────────────────────────────────────────
+def parse_date(date_str):
+    """Парсит дату из API и всегда возвращает timezone-aware datetime или None."""
+    if not date_str:
+        return None
+    try:
+        dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+        # Если дата без timezone — принудительно добавляем UTC
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except Exception:
+        return None
+
+
 def analyse(tasks, members):
     now = datetime.now(timezone.utc)
     closed, open_, overdue, no_due = [], [], [], []
@@ -117,13 +147,7 @@ def analyse(tasks, members):
         col       = t.get("_col_id")
         is_closed = col in CLOSED_COL_IDS
 
-        due_str = t.get("dueDate") or t.get("endDate")
-        due_dt  = None
-        if due_str:
-            try:
-                due_dt = datetime.fromisoformat(due_str.replace("Z", "+00:00"))
-            except Exception:
-                pass
+        due_dt = parse_date(t.get("dueDate") or t.get("endDate"))
 
         assignees = t.get("assignees") or []
         uid = assignees[0] if assignees else None
@@ -221,11 +245,11 @@ def build_html(stats, members):
           <td style="white-space:nowrap">{resp}</td>
         </tr>"""
 
-    col_labels = json.dumps([COL_NAMES.get(c, str(c)) for c in COL_NAMES])
-    col_open   = json.dumps([stats["col_stats"].get(c, {}).get("open",   0) for c in COL_NAMES])
-    col_closed = json.dumps([stats["col_stats"].get(c, {}).get("closed", 0) for c in COL_NAMES])
-    col_total  = json.dumps([stats["col_stats"].get(c, {}).get("open", 0) +
-                              stats["col_stats"].get(c, {}).get("closed", 0) for c in COL_NAMES])
+    col_labels   = json.dumps([COL_NAMES.get(c, str(c)) for c in COL_NAMES])
+    col_open     = json.dumps([stats["col_stats"].get(c, {}).get("open",   0) for c in COL_NAMES])
+    col_closed   = json.dumps([stats["col_stats"].get(c, {}).get("closed", 0) for c in COL_NAMES])
+    col_total    = json.dumps([stats["col_stats"].get(c, {}).get("open", 0) +
+                                stats["col_stats"].get(c, {}).get("closed", 0) for c in COL_NAMES])
     donut_colors = json.dumps(["#5B8FF9","#5AD8A6","#F6BD16","#E8684A","#9B8AFA"])
 
     return f"""<!DOCTYPE html>
@@ -381,4 +405,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
