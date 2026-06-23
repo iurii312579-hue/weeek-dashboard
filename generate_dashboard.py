@@ -8,6 +8,9 @@ API_KEY  = os.environ["WEEEK_API_KEY"]
 BASE_URL = "https://api.weeek.net/public/v1"
 HEADERS  = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
+TIMEOUT    = 10          # секунд на каждый запрос
+MAX_PAGES  = 20          # защита от бесконечной пагинации
+
 WS_ID      = 544168
 PROJECT_ID = 204
 BOARD_ID   = 2074
@@ -21,29 +24,30 @@ COL_NAMES = {
     10039: "Протокольные",
 }
 
-# ── Динамическая загрузка участников из API ───────────────────────────────────
+CLOSED_COL_IDS = {6719, 6726, 10039}
+
+# ── Участники ─────────────────────────────────────────────────────────────────
 def load_members():
-    """
-    Загружает всех участников воркспейса из Weeek API.
-    Возвращает словарь {uuid: "Фамилия И.О."}
-    Новые сотрудники подхватываются автоматически при каждом запуске.
-    """
+    print("Загружаю участников...", flush=True)
     members = {}
     try:
-        r = requests.get(f"{BASE_URL}/ws/members", headers=HEADERS, timeout=15)
+        r = requests.get(
+            f"{BASE_URL}/ws/members",
+            headers=HEADERS,
+            timeout=TIMEOUT
+        )
         r.raise_for_status()
         data = r.json()
+        print(f"  Ответ API участников: {list(data.keys())}", flush=True)
         for m in data.get("members", []):
-            uid       = m.get("id", "")
-            last_name = (m.get("lastName")  or "").strip()
-            first_name= (m.get("firstName") or "").strip()
+            uid        = m.get("id", "")
+            last_name  = (m.get("lastName")   or "").strip()
+            first_name = (m.get("firstName")  or "").strip()
+            patronymic = (m.get("patronymic") or "").strip()
             if not uid:
                 continue
-            # Формат: Фамилия И.О.
             if last_name and first_name:
                 name = f"{last_name} {first_name[0]}."
-                # Если есть отчество
-                patronymic = (m.get("patronymic") or "").strip()
                 if patronymic:
                     name += f"{patronymic[0]}."
             elif last_name:
@@ -53,57 +57,66 @@ def load_members():
             else:
                 name = uid[:8] + "..."
             members[uid] = name
-        print(f"Загружено участников: {len(members)}")
+        print(f"  Загружено участников: {len(members)}", flush=True)
+    except requests.exceptions.Timeout:
+        print("  ОШИБКА: таймаут при загрузке участников", flush=True)
     except Exception as e:
-        print(f"Ошибка загрузки участников: {e}")
+        print(f"  ОШИБКА загрузки участников: {e}", flush=True)
     return members
 
 
 def user_name(uid, members):
-    """Возвращает имя участника по UUID. Если нет — сокращённый UUID."""
     if not uid:
         return "—"
     return members.get(uid, uid[:8] + "...")
 
 
-# ── Загрузка задач ────────────────────────────────────────────────────────────
+# ── Задачи ────────────────────────────────────────────────────────────────────
 def load_tasks():
     tasks = []
-    for col_id in COL_NAMES:
+    for col_id, col_name in COL_NAMES.items():
+        print(f"  Загружаю колонку '{col_name}' (id={col_id})...", flush=True)
         page = 1
-        while True:
-            r = requests.get(
-                f"{BASE_URL}/tm/tasks",
-                headers=HEADERS,
-                params={"boardColumnId": col_id, "page": page},
-                timeout=15,
-            )
-            r.raise_for_status()
-            data  = r.json()
-            batch = data.get("tasks", [])
-            for t in batch:
-                t["_col_id"] = col_id
-            tasks.extend(batch)
-            if not data.get("hasMore"):
+        while page <= MAX_PAGES:
+            try:
+                r = requests.get(
+                    f"{BASE_URL}/tm/tasks",
+                    headers=HEADERS,
+                    params={"boardColumnId": col_id, "page": page},
+                    timeout=TIMEOUT,
+                )
+                r.raise_for_status()
+                data  = r.json()
+                batch = data.get("tasks", [])
+                for t in batch:
+                    t["_col_id"] = col_id
+                tasks.extend(batch)
+                print(f"    стр.{page}: {len(batch)} задач", flush=True)
+                # Проверяем оба возможных поля пагинации
+                has_more = data.get("hasMore") or data.get("has_more") or False
+                if not has_more or not batch:
+                    break
+                page += 1
+            except requests.exceptions.Timeout:
+                print(f"    ОШИБКА: таймаут на стр.{page}, пропускаю", flush=True)
                 break
-            page += 1
+            except Exception as e:
+                print(f"    ОШИБКА: {e}, пропускаю", flush=True)
+                break
     return tasks
 
 
-# ── Аналитика ────────────────────────────────────────────────────────────────
-CLOSED_COL_IDS = {6719, 6726, 10039}   # Сделали / Не реализованные / Протокольные
-
+# ── Аналитика ─────────────────────────────────────────────────────────────────
 def analyse(tasks, members):
     now = datetime.now(timezone.utc)
     closed, open_, overdue, no_due = [], [], [], []
-    workload   = {}   # uid → count (все задачи)
-    over_by    = {}   # uid → count (просроченные)
+    workload = {}
+    over_by  = {}
 
     for t in tasks:
-        col = t.get("_col_id")
+        col       = t.get("_col_id")
         is_closed = col in CLOSED_COL_IDS
 
-        # Дедлайн
         due_str = t.get("dueDate") or t.get("endDate")
         due_dt  = None
         if due_str:
@@ -112,11 +125,9 @@ def analyse(tasks, members):
             except Exception:
                 pass
 
-        # Исполнитель (первый assignee)
         assignees = t.get("assignees") or []
         uid = assignees[0] if assignees else None
 
-        # Нагрузка
         if uid:
             workload[uid] = workload.get(uid, 0) + 1
 
@@ -131,11 +142,9 @@ def analyse(tasks, members):
             elif not due_dt:
                 no_due.append(t)
 
-    # Сортировка нагрузки по убыванию
     workload_sorted = sorted(workload.items(), key=lambda x: x[1], reverse=True)
     over_sorted     = sorted(over_by.items(),  key=lambda x: x[1], reverse=True)
 
-    # Задачи по колонкам
     col_stats = {}
     for t in tasks:
         col = t.get("_col_id")
@@ -147,21 +156,21 @@ def analyse(tasks, members):
             col_stats[col]["open"] += 1
 
     return {
-        "total":    len(tasks),
-        "closed":   closed,
-        "open":     open_,
-        "overdue":  overdue,
-        "no_due":   no_due,
-        "workload": workload_sorted,
-        "over_by":  over_sorted,
+        "total":     len(tasks),
+        "closed":    closed,
+        "open":      open_,
+        "overdue":   overdue,
+        "no_due":    no_due,
+        "workload":  workload_sorted,
+        "over_by":   over_sorted,
         "col_stats": col_stats,
     }
 
 
 # ── HTML ──────────────────────────────────────────────────────────────────────
 def build_html(stats, members):
-    now_str = datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
-    total   = stats["total"]
+    now_str   = datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
+    total     = stats["total"]
     n_closed  = len(stats["closed"])
     n_open    = len(stats["open"])
     n_overdue = len(stats["overdue"])
@@ -171,8 +180,7 @@ def build_html(stats, members):
     pct_open   = round(n_open   / total * 100) if total else 0
     pct_over   = round(n_overdue / n_open * 100) if n_open else 0
 
-    # Нагрузка — бары
-    max_wl = stats["workload"][0][1] if stats["workload"] else 1
+    max_wl  = stats["workload"][0][1] if stats["workload"] else 1
     wl_rows = ""
     for uid, cnt in stats["workload"]:
         pct = round(cnt / max_wl * 100)
@@ -184,8 +192,7 @@ def build_html(stats, members):
           </div></div>
         </div>"""
 
-    # Просрочки — бары
-    max_ov = stats["over_by"][0][1] if stats["over_by"] else 1
+    max_ov  = stats["over_by"][0][1] if stats["over_by"] else 1
     ov_rows = ""
     for uid, cnt in stats["over_by"]:
         pct = round(cnt / max_ov * 100)
@@ -199,7 +206,6 @@ def build_html(stats, members):
     if not ov_rows:
         ov_rows = '<p style="color:#888;font-size:13px;margin:8px 0;">Просроченных задач нет</p>'
 
-    # Таблица просроченных
     overdue_rows = ""
     for t in stats["overdue"]:
         num  = t.get("number", "")
@@ -215,7 +221,6 @@ def build_html(stats, members):
           <td style="white-space:nowrap">{resp}</td>
         </tr>"""
 
-    # Данные для графиков (JS)
     col_labels = json.dumps([COL_NAMES.get(c, str(c)) for c in COL_NAMES])
     col_open   = json.dumps([stats["col_stats"].get(c, {}).get("open",   0) for c in COL_NAMES])
     col_closed = json.dumps([stats["col_stats"].get(c, {}).get("closed", 0) for c in COL_NAMES])
@@ -239,7 +244,6 @@ def build_html(stats, members):
   .open-btn{{float:right;margin-top:-36px;padding:7px 16px;border:1px solid #ccc;
              border-radius:6px;font-size:13px;text-decoration:none;color:#333;background:#fff}}
   .open-btn:hover{{background:#f0f0f0}}
-  /* Метрики */
   .metrics{{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}}
   .metric{{background:#fff;border-radius:10px;padding:16px 20px;box-shadow:0 1px 4px rgba(0,0,0,.07)}}
   .metric-label{{font-size:12px;color:#888;display:flex;align-items:center;gap:6px;margin-bottom:6px}}
@@ -248,37 +252,29 @@ def build_html(stats, members):
   .dot-red{{background:#E74C3C}}.dot-gray{{background:#BDC3C7}}
   .metric-value{{font-size:36px;font-weight:700;line-height:1}}
   .metric-sub{{font-size:12px;color:#888;margin-top:4px}}
-  /* Карточки */
   .card{{background:#fff;border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07)}}
   .section-title{{font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:6px}}
   .red-dot{{width:8px;height:8px;border-radius:50%;background:#E74C3C;display:inline-block}}
-  /* Двойная сетка */
   .grid2{{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}}
-  /* Бары */
   .bar-row{{display:flex;align-items:center;gap:10px;margin-bottom:8px}}
   .bar-name{{font-size:13px;min-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
   .bar-track{{flex:1;background:#F0F2F5;border-radius:4px;height:22px;overflow:hidden}}
-  .bar-fill{{background:#93C4EE;height:100%;border-radius:4px;display:flex;align-items:center;
-             min-width:28px;transition:width .4s}}
+  .bar-fill{{background:#93C4EE;height:100%;border-radius:4px;display:flex;align-items:center;min-width:28px}}
   .bar-fill-red{{background:#F5B8B8}}
   .bar-val{{font-size:12px;font-weight:600;padding-left:6px;color:#333}}
-  /* Таблица просроченных */
   table{{width:100%;border-collapse:collapse;font-size:13px}}
   th{{text-align:left;color:#888;font-size:11px;font-weight:500;text-transform:uppercase;
       padding:4px 8px;border-bottom:1px solid #eee}}
   td{{padding:8px;border-bottom:1px solid #f5f5f5}}
   tr:last-child td{{border-bottom:none}}
-  /* Графики */
   .chart-wrap{{position:relative;height:200px}}
 </style>
 </head>
 <body>
-
 <h1>Плечи 2026 (SCRUM) — Дашборд</h1>
 <p class="sub">Обновлено: {now_str} | Всего задач: {total}</p>
 <a class="open-btn" href="{BOARD_URL}" target="_blank">Открыть доску</a>
 
-<!-- Метрики -->
 <div class="metrics">
   <div class="metric">
     <div class="metric-label"><span class="dot dot-green"></span>Закрыто</div>
@@ -302,7 +298,6 @@ def build_html(stats, members):
   </div>
 </div>
 
-<!-- Нагрузка + Просрочки -->
 <div class="grid2">
   <div class="card">
     <div class="section-title">Нагрузка по исполнителям</div>
@@ -314,7 +309,6 @@ def build_html(stats, members):
   </div>
 </div>
 
-<!-- Просроченные задачи -->
 <div class="card" style="margin-bottom:16px">
   <div class="section-title"><span class="red-dot"></span>&nbsp;Просроченные задачи ({n_overdue})</div>
   <table>
@@ -323,7 +317,6 @@ def build_html(stats, members):
   </table>
 </div>
 
-<!-- Графики -->
 <div class="grid2">
   <div class="card">
     <div class="section-title">Задачи по колонкам</div>
@@ -336,20 +329,18 @@ def build_html(stats, members):
 </div>
 
 <script>
-const labels  = {col_labels};
-const colOpen = {col_open};
+const labels    = {col_labels};
+const colOpen   = {col_open};
 const colClosed = {col_closed};
 const colTotal  = {col_total};
-const colors  = {donut_colors};
+const colors    = {donut_colors};
 
-// Пончик
 new Chart(document.getElementById('donutChart'), {{
   type: 'doughnut',
   data: {{ labels, datasets: [{{ data: colTotal, backgroundColor: colors, borderWidth:2 }}] }},
   options: {{ cutout:'65%', plugins:{{ legend:{{ position:'right',labels:{{font:{{size:11}},boxWidth:12}} }} }} }}
 }});
 
-// Сгруппированный бар
 new Chart(document.getElementById('barChart'), {{
   type: 'bar',
   data: {{
@@ -372,12 +363,12 @@ new Chart(document.getElementById('barChart'), {{
 
 # ── Точка входа ───────────────────────────────────────────────────────────────
 def main():
-    print("Загружаю участников из Weeek...")
-    members = load_members()            # <-- динамически, без статичного словаря
+    print("=== Старт генерации дашборда ===", flush=True)
+    members = load_members()
 
-    print("Загружаю задачи...")
+    print("Загружаю задачи...", flush=True)
     tasks = load_tasks()
-    print(f"Задач загружено: {len(tasks)}")
+    print(f"Итого задач: {len(tasks)}", flush=True)
 
     stats = analyse(tasks, members)
     html  = build_html(stats, members)
@@ -385,7 +376,7 @@ def main():
     os.makedirs("output", exist_ok=True)
     with open("output/index.html", "w", encoding="utf-8") as f:
         f.write(html)
-    print("Дашборд сохранён в output/index.html")
+    print("=== Дашборд сохранён в output/index.html ===", flush=True)
 
 
 if __name__ == "__main__":
