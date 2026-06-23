@@ -135,17 +135,13 @@ def analyse(tasks, members):
         due_dt    = parse_date(t.get("dueDate") or t.get("dueDateTime"))
         assignees = t.get("assignees") or []
 
-        # Считаем нагрузку по ВСЕМ исполнителям задачи
-        for uid in assignees:
-            workload[uid] = workload.get(uid, 0) + 1
-
-        # Для просрочек берём первого
-        uid_main = assignees[0] if assignees else None
-
         if is_closed:
             closed.append(t)
         else:
             open_.append(t)
+            # Нагрузка — только открытые задачи
+            for uid in assignees:
+                workload[uid] = workload.get(uid, 0) + 1
             if due_dt and due_dt < now:
                 overdue.append(t)
                 for uid in assignees:
