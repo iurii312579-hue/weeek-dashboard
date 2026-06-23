@@ -25,7 +25,6 @@ COL_NAMES = {
 CLOSED_COL_IDS = {6719, 6726, 10039}
 
 
-# ── Участники ─────────────────────────────────────────────────────────────────
 def load_members():
     print("Загружаю участников...", flush=True)
     members = {}
@@ -37,7 +36,7 @@ def load_members():
             uid        = m.get("id", "")
             last_name  = (m.get("lastName")   or "").strip()
             first_name = (m.get("firstName")  or "").strip()
-            middle     = (m.get("middleName") or "").strip()   # ← правильное поле
+            middle     = (m.get("middleName") or "").strip()
             if not uid:
                 continue
             if last_name and first_name:
@@ -49,13 +48,12 @@ def load_members():
             elif first_name:
                 name = first_name
             else:
-                # Fallback на email если нет имени
                 email = (m.get("email") or "").split("@")[0]
                 name  = email if email else uid[:8] + "..."
             members[uid] = name
         print(f"  Загружено участников: {len(members)}", flush=True)
     except Exception as e:
-        print(f"  ОШИБКА загрузки участников: {e}", flush=True)
+        print(f"  ОШИБКА: {e}", flush=True)
     return members
 
 
@@ -65,7 +63,6 @@ def user_name(uid, members):
     return members.get(uid, uid[:8] + "...")
 
 
-# ── Задачи ────────────────────────────────────────────────────────────────────
 def load_tasks():
     tasks = []
     for col_id, col_name in COL_NAMES.items():
@@ -77,7 +74,7 @@ def load_tasks():
                     f"{BASE_URL}/tm/tasks",
                     headers=HEADERS,
                     params={
-                        "boardId":       BOARD_ID,  # фильтр по нашей доске
+                        "boardId":       BOARD_ID,
                         "boardColumnId": col_id,
                         "perPage":       PER_PAGE,
                         "offset":        offset,
@@ -87,28 +84,19 @@ def load_tasks():
                 r.raise_for_status()
                 data  = r.json()
                 batch = data.get("tasks", [])
-
                 for t in batch:
                     t["_col_id"] = col_id
                 tasks.extend(batch)
                 print(f"    offset={offset}: {len(batch)} задач", flush=True)
-
-                # Останавливаемся на пустой странице или неполной
                 if len(batch) < PER_PAGE:
                     break
                 offset += PER_PAGE
-
-            except requests.exceptions.Timeout:
-                print(f"    ОШИБКА: таймаут на offset={offset}", flush=True)
-                break
             except Exception as e:
                 print(f"    ОШИБКА: {e}", flush=True)
                 break
-
     return tasks
 
 
-# ── Парсинг дат ───────────────────────────────────────────────────────────────
 def parse_date(date_str):
     if not date_str:
         return None
@@ -123,22 +111,36 @@ def parse_date(date_str):
         return None
 
 
-# ── Аналитика ─────────────────────────────────────────────────────────────────
 def analyse(tasks, members):
     now = datetime.now(timezone.utc)
     closed, open_, overdue, no_due = [], [], [], []
     workload = {}
     over_by  = {}
 
+    # Диагностика: все уникальные assignee UUID на доске
+    all_uids = set()
+    for t in tasks:
+        for uid in (t.get("assignees") or []):
+            all_uids.add(uid)
+
+    print(f"\n  Уникальных исполнителей на доске: {len(all_uids)}", flush=True)
+    for uid in sorted(all_uids):
+        name = members.get(uid)
+        print(f"    {uid[:8]}... → '{name}'", flush=True)
+    print("", flush=True)
+
     for t in tasks:
         col       = t.get("_col_id")
         is_closed = col in CLOSED_COL_IDS
         due_dt    = parse_date(t.get("dueDate") or t.get("dueDateTime"))
         assignees = t.get("assignees") or []
-        uid       = assignees[0] if assignees else None
 
-        if uid:
+        # Считаем нагрузку по ВСЕМ исполнителям задачи
+        for uid in assignees:
             workload[uid] = workload.get(uid, 0) + 1
+
+        # Для просрочек берём первого
+        uid_main = assignees[0] if assignees else None
 
         if is_closed:
             closed.append(t)
@@ -146,7 +148,7 @@ def analyse(tasks, members):
             open_.append(t)
             if due_dt and due_dt < now:
                 overdue.append(t)
-                if uid:
+                for uid in assignees:
                     over_by[uid] = over_by.get(uid, 0) + 1
             elif not due_dt:
                 no_due.append(t)
@@ -174,7 +176,6 @@ def analyse(tasks, members):
     }
 
 
-# ── HTML ──────────────────────────────────────────────────────────────────────
 def build_html(stats, members):
     now_str   = datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
     total     = stats["total"]
@@ -219,7 +220,7 @@ def build_html(stats, members):
         name = (t.get("title") or "")[:80] + ("…" if len(t.get("title","")) > 80 else "")
         due  = (t.get("dueDate") or t.get("dueDateTime") or "")[:10]
         assignees = t.get("assignees") or []
-        resp = user_name(assignees[0], members) if assignees else "—"
+        resp = " / ".join(user_name(u, members) for u in assignees) if assignees else "—"
         overdue_rows += f"""
         <tr>
           <td style="color:#C0392B;font-weight:600">{num}</td>
