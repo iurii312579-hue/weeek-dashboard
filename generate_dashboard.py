@@ -8,8 +8,8 @@ API_KEY  = os.environ["WEEEK_API_KEY"]
 BASE_URL = "https://api.weeek.net/public/v1"
 HEADERS  = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
-TIMEOUT   = 10
-MAX_PAGES = 50
+TIMEOUT  = 10
+PER_PAGE = 50   # максимум задач на страницу
 
 WS_ID      = 544168
 PROJECT_ID = 204
@@ -33,7 +33,6 @@ def load_members():
         r = requests.get(f"{BASE_URL}/ws/members", headers=HEADERS, timeout=TIMEOUT)
         r.raise_for_status()
         data = r.json()
-        print(f"  Ответ API участников: {list(data.keys())}", flush=True)
         for m in data.get("members", []):
             uid        = m.get("id", "")
             last_name  = (m.get("lastName")   or "").strip()
@@ -53,8 +52,6 @@ def load_members():
                 name = uid[:8] + "..."
             members[uid] = name
         print(f"  Загружено участников: {len(members)}", flush=True)
-    except requests.exceptions.Timeout:
-        print("  ОШИБКА: таймаут при загрузке участников", flush=True)
     except Exception as e:
         print(f"  ОШИБКА загрузки участников: {e}", flush=True)
     return members
@@ -68,68 +65,69 @@ def user_name(uid, members):
 
 # ── Задачи ────────────────────────────────────────────────────────────────────
 def load_tasks():
+    """
+    Загружаем задачи только нашей доски (boardId=BOARD_ID),
+    фильтруя по каждой колонке. Пагинация через offset.
+    """
     tasks = []
     for col_id, col_name in COL_NAMES.items():
-        print(f"  Загружаю колонку '{col_name}' (id={col_id})...", flush=True)
-        page = 1
-        while page <= MAX_PAGES:
+        print(f"  Колонка '{col_name}'...", flush=True)
+        offset = 0
+        while True:
             try:
                 r = requests.get(
                     f"{BASE_URL}/tm/tasks",
                     headers=HEADERS,
-                    params={"boardColumnId": col_id, "page": page},
+                    params={
+                        "boardId":       BOARD_ID,   # ← фильтр по доске
+                        "boardColumnId": col_id,
+                        "perPage":       PER_PAGE,
+                        "offset":        offset,
+                    },
                     timeout=TIMEOUT,
                 )
                 r.raise_for_status()
                 data  = r.json()
-
-                # Отладка структуры ответа на первой странице
-                if page == 1:
-                    keys = list(data.keys())
-                    print(f"    Ключи ответа: {keys}", flush=True)
-
                 batch = data.get("tasks", [])
+
+                # Отладка структуры ответа (только первый запрос)
+                if offset == 0:
+                    print(f"    Ключи ответа: {list(data.keys())}", flush=True)
+
                 for t in batch:
                     t["_col_id"] = col_id
                 tasks.extend(batch)
-                print(f"    стр.{page}: {len(batch)} задач (всего в колонке пока: {sum(1 for t in tasks if t['_col_id']==col_id)})", flush=True)
+                print(f"    offset={offset}: {len(batch)} задач", flush=True)
 
-                # Останавливаемся если пришло меньше ожидаемого (последняя страница)
-                if len(batch) == 0:
-                    print(f"    Пустая страница — конец колонки", flush=True)
+                # Конец если пришло меньше PER_PAGE или пустая страница
+                if len(batch) < PER_PAGE:
                     break
 
-                # Проверяем все возможные поля пагинации
-                has_more = (
-                    data.get("hasMore")
-                    or data.get("has_more")
-                    or data.get("next_page")
-                    or False
-                )
-                if not has_more:
-                    print(f"    hasMore=False — конец колонки", flush=True)
+                # Или если API явно говорит hasMore=False
+                if not data.get("hasMore", True):
                     break
 
-                page += 1
+                offset += PER_PAGE
 
             except requests.exceptions.Timeout:
-                print(f"    ОШИБКА: таймаут на стр.{page}, пропускаю колонку", flush=True)
+                print(f"    ОШИБКА: таймаут на offset={offset}", flush=True)
                 break
             except Exception as e:
-                print(f"    ОШИБКА: {e}, пропускаю колонку", flush=True)
+                print(f"    ОШИБКА: {e}", flush=True)
                 break
 
     return tasks
 
 
-# ── Аналитика ─────────────────────────────────────────────────────────────────
+# ── Парсинг дат ───────────────────────────────────────────────────────────────
 def parse_date(date_str):
-    """Парсит дату из API и всегда возвращает timezone-aware datetime или None."""
     if not date_str:
         return None
     try:
+        # Формат Y-m-d (без времени)
+        if len(date_str) == 10:
+            return datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
         dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-        # Если дата без timezone — принудительно добавляем UTC
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return dt
@@ -137,6 +135,7 @@ def parse_date(date_str):
         return None
 
 
+# ── Аналитика ─────────────────────────────────────────────────────────────────
 def analyse(tasks, members):
     now = datetime.now(timezone.utc)
     closed, open_, overdue, no_due = [], [], [], []
@@ -147,7 +146,7 @@ def analyse(tasks, members):
         col       = t.get("_col_id")
         is_closed = col in CLOSED_COL_IDS
 
-        due_dt = parse_date(t.get("dueDate") or t.get("endDate"))
+        due_dt = parse_date(t.get("dueDate") or t.get("dueDateTime"))
 
         assignees = t.get("assignees") or []
         uid = assignees[0] if assignees else None
@@ -174,10 +173,8 @@ def analyse(tasks, members):
         col = t.get("_col_id")
         if col not in col_stats:
             col_stats[col] = {"open": 0, "closed": 0}
-        if t["_col_id"] in CLOSED_COL_IDS:
-            col_stats[col]["closed"] += 1
-        else:
-            col_stats[col]["open"] += 1
+        key = "closed" if t["_col_id"] in CLOSED_COL_IDS else "open"
+        col_stats[col][key] += 1
 
     return {
         "total":     len(tasks),
@@ -234,7 +231,7 @@ def build_html(stats, members):
     for t in stats["overdue"]:
         num  = t.get("number", "")
         name = (t.get("title") or "")[:80] + ("…" if len(t.get("title","")) > 80 else "")
-        due  = (t.get("dueDate") or t.get("endDate") or "")[:10]
+        due  = (t.get("dueDate") or t.get("dueDateTime") or "")[:10]
         assignees = t.get("assignees") or []
         resp = user_name(assignees[0], members) if assignees else "—"
         overdue_rows += f"""
@@ -246,9 +243,9 @@ def build_html(stats, members):
         </tr>"""
 
     col_labels   = json.dumps([COL_NAMES.get(c, str(c)) for c in COL_NAMES])
-    col_open     = json.dumps([stats["col_stats"].get(c, {}).get("open",   0) for c in COL_NAMES])
-    col_closed   = json.dumps([stats["col_stats"].get(c, {}).get("closed", 0) for c in COL_NAMES])
-    col_total    = json.dumps([stats["col_stats"].get(c, {}).get("open", 0) +
+    col_open_js  = json.dumps([stats["col_stats"].get(c, {}).get("open",   0) for c in COL_NAMES])
+    col_closed_js= json.dumps([stats["col_stats"].get(c, {}).get("closed", 0) for c in COL_NAMES])
+    col_total_js = json.dumps([stats["col_stats"].get(c, {}).get("open", 0) +
                                 stats["col_stats"].get(c, {}).get("closed", 0) for c in COL_NAMES])
     donut_colors = json.dumps(["#5B8FF9","#5AD8A6","#F6BD16","#E8684A","#9B8AFA"])
 
@@ -354,9 +351,9 @@ def build_html(stats, members):
 
 <script>
 const labels    = {col_labels};
-const colOpen   = {col_open};
-const colClosed = {col_closed};
-const colTotal  = {col_total};
+const colOpen   = {col_open_js};
+const colClosed = {col_closed_js};
+const colTotal  = {col_total_js};
 const colors    = {donut_colors};
 
 new Chart(document.getElementById('donutChart'), {{
@@ -364,7 +361,6 @@ new Chart(document.getElementById('donutChart'), {{
   data: {{ labels, datasets: [{{ data: colTotal, backgroundColor: colors, borderWidth:2 }}] }},
   options: {{ cutout:'65%', plugins:{{ legend:{{ position:'right',labels:{{font:{{size:11}},boxWidth:12}} }} }} }}
 }});
-
 new Chart(document.getElementById('barChart'), {{
   type: 'bar',
   data: {{
@@ -405,3 +401,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
