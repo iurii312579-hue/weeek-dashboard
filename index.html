@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Плечи 2026 — Дашборд</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+        background:#F5F6FA;color:#1a1a2e;padding:24px 32px}
+  h1{font-size:22px;font-weight:700;margin-bottom:2px}
+  .sub{font-size:12px;color:#888;margin-bottom:20px}
+  .open-btn{float:right;margin-top:-36px;padding:7px 16px;border:1px solid #ccc;
+             border-radius:6px;font-size:13px;text-decoration:none;color:#333;background:#fff}
+  .open-btn:hover{background:#f0f0f0}
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+  .metric{background:#fff;border-radius:10px;padding:16px 20px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+  .metric-label{font-size:12px;color:#888;display:flex;align-items:center;gap:6px;margin-bottom:6px}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .dot-green{background:#27AE60}.dot-blue{background:#2980B9}
+  .dot-red{background:#E74C3C}.dot-gray{background:#BDC3C7}
+  .metric-value{font-size:36px;font-weight:700;line-height:1}
+  .metric-sub{font-size:12px;color:#888;margin-top:4px}
+  .card{background:#fff;border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+  .section-title{font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+  .red-dot{width:8px;height:8px;border-radius:50%;background:#E74C3C;display:inline-block}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .bar-name{font-size:13px;min-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar-track{flex:1;background:#F0F2F5;border-radius:4px;height:22px;overflow:hidden}
+  .bar-fill{background:#93C4EE;height:100%;border-radius:4px;display:flex;align-items:center;min-width:28px}
+  .bar-fill-red{background:#F5B8B8}
+  .bar-val{font-size:12px;font-weight:600;padding-left:6px;color:#333}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;color:#888;font-size:11px;font-weight:500;text-transform:uppercase;
+      padding:4px 8px;border-bottom:1px solid #eee}
+  td{padding:8px;border-bottom:1px solid #f5f5f5}
+  tr:last-child td{border-bottom:none}
+  .chart-wrap{position:relative;height:200px}
+</style>
+</head>
+<body>
+<h1>Плечи 2026 (SCRUM) — Дашборд</h1>
+<p class="sub">Обновлено: 05.09.2026 10:12 UTC | Всего задач: 103</p>
+<a class="open-btn" href="https://app.weeek.net/ws/544168/project/204/board/2074" target="_blank">Открыть доску</a>
+
+<div class="metrics">
+  <div class="metric">
+    <div class="metric-label"><span class="dot dot-green"></span>Закрыто</div>
+    <div class="metric-value">84</div>
+    <div class="metric-sub">82% всех задач</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label"><span class="dot dot-blue"></span>В работе</div>
+    <div class="metric-value">19</div>
+    <div class="metric-sub">18% всех задач</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label"><span class="dot dot-red"></span>Просрочено</div>
+    <div class="metric-value">10</div>
+    <div class="metric-sub">53% открытых</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label"><span class="dot dot-gray"></span>Без срока</div>
+    <div class="metric-value">0</div>
+    <div class="metric-sub">нет дедлайна</div>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <div class="section-title">Нагрузка по исполнителям</div>
+    
+        <div class="bar-row">
+          <span class="bar-name">Михайловский В.</span>
+          <div class="bar-track"><div class="bar-fill" style="width:100%">
+            <span class="bar-val">7</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Разборов И.</span>
+          <div class="bar-track"><div class="bar-fill" style="width:71%">
+            <span class="bar-val">5</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Теньков Ю.</span>
+          <div class="bar-track"><div class="bar-fill" style="width:57%">
+            <span class="bar-val">4</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Сандаков Э.</span>
+          <div class="bar-track"><div class="bar-fill" style="width:57%">
+            <span class="bar-val">4</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Мукимов А.</span>
+          <div class="bar-track"><div class="bar-fill" style="width:29%">
+            <span class="bar-val">2</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Иванчин Ю.</span>
+          <div class="bar-track"><div class="bar-fill" style="width:29%">
+            <span class="bar-val">2</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Инженер-технолог</span>
+          <div class="bar-track"><div class="bar-fill" style="width:14%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Кирсанов А.</span>
+          <div class="bar-track"><div class="bar-fill" style="width:14%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Макаров Ю.</span>
+          <div class="bar-track"><div class="bar-fill" style="width:14%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Касанин Евгений</span>
+          <div class="bar-track"><div class="bar-fill" style="width:14%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Харнетов П.</span>
+          <div class="bar-track"><div class="bar-fill" style="width:14%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Цыбульский Ю.</span>
+          <div class="bar-track"><div class="bar-fill" style="width:14%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Залунин Ю.</span>
+          <div class="bar-track"><div class="bar-fill" style="width:14%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Овакимян В.</span>
+          <div class="bar-track"><div class="bar-fill" style="width:14%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Сакулин М.</span>
+          <div class="bar-track"><div class="bar-fill" style="width:14%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Иван Сас</span>
+          <div class="bar-track"><div class="bar-fill" style="width:14%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+  </div>
+  <div class="card">
+    <div class="section-title"><span class="red-dot"></span>&nbsp;Просрочки по исполнителям</div>
+    
+        <div class="bar-row">
+          <span class="bar-name">Разборов И.</span>
+          <div class="bar-track"><div class="bar-fill bar-fill-red" style="width:100%">
+            <span class="bar-val">4</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Михайловский В.</span>
+          <div class="bar-track"><div class="bar-fill bar-fill-red" style="width:75%">
+            <span class="bar-val">3</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Сандаков Э.</span>
+          <div class="bar-track"><div class="bar-fill bar-fill-red" style="width:50%">
+            <span class="bar-val">2</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Инженер-технолог</span>
+          <div class="bar-track"><div class="bar-fill bar-fill-red" style="width:25%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Касанин Евгений</span>
+          <div class="bar-track"><div class="bar-fill bar-fill-red" style="width:25%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Иванчин Ю.</span>
+          <div class="bar-track"><div class="bar-fill bar-fill-red" style="width:25%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Харнетов П.</span>
+          <div class="bar-track"><div class="bar-fill bar-fill-red" style="width:25%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Цыбульский Ю.</span>
+          <div class="bar-track"><div class="bar-fill bar-fill-red" style="width:25%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Овакимян В.</span>
+          <div class="bar-track"><div class="bar-fill bar-fill-red" style="width:25%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Сакулин М.</span>
+          <div class="bar-track"><div class="bar-fill bar-fill-red" style="width:25%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-name">Иван Сас</span>
+          <div class="bar-track"><div class="bar-fill bar-fill-red" style="width:25%">
+            <span class="bar-val">1</span>
+          </div></div>
+        </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <div class="section-title"><span class="red-dot"></span>&nbsp;Просроченные задачи (10)</div>
+  <table>
+    <thead><tr><th>N</th><th>Задача</th><th>Срок</th><th>Ответственный</th></tr></thead>
+    <tbody>
+        <tr>
+          <td style="color:#C0392B;font-weight:600"></td>
+          <td>90. Отрисовать границы отвала Северный на конец 2026 года с учетом отставания в …</td>
+          <td style="color:#C0392B;white-space:nowrap">2026-09-02</td>
+          <td style="white-space:nowrap">Михайловский В.</td>
+        </tr>
+        <tr>
+          <td style="color:#C0392B;font-weight:600"></td>
+          <td>83. План ВКП для строительства дорог на месяц</td>
+          <td style="color:#C0392B;white-space:nowrap">2026-09-04</td>
+          <td style="white-space:nowrap">Разборов И. / Инженер-технолог</td>
+        </tr>
+        <tr>
+          <td style="color:#C0392B;font-weight:600"></td>
+          <td>95. Расширение дороги/подъездных путей к экскаватору ЭКГ20/30</td>
+          <td style="color:#C0392B;white-space:nowrap">2026-09-02</td>
+          <td style="white-space:nowrap">Касанин Евгений / Разборов И.</td>
+        </tr>
+        <tr>
+          <td style="color:#C0392B;font-weight:600"></td>
+          <td>94. Временный отвал контр-форс над 1 пластом</td>
+          <td style="color:#C0392B;white-space:nowrap">2026-09-02</td>
+          <td style="white-space:nowrap">Михайловский В.</td>
+        </tr>
+        <tr>
+          <td style="color:#C0392B;font-weight:600"></td>
+          <td>93. Спрямить заезд на Малый верх. Оценить эффект и передать на ГМ оценку</td>
+          <td style="color:#C0392B;white-space:nowrap">2026-08-27</td>
+          <td style="white-space:nowrap">Сандаков Э.</td>
+        </tr>
+        <tr>
+          <td style="color:#C0392B;font-weight:600"></td>
+          <td>92. Пересмотреть плечо откатки в 4 кв с Севера на Внутреннний отвал. Оценить эфф…</td>
+          <td style="color:#C0392B;white-space:nowrap">2026-08-27</td>
+          <td style="white-space:nowrap">Сандаков Э.</td>
+        </tr>
+        <tr>
+          <td style="color:#C0392B;font-weight:600"></td>
+          <td>64. Новый Придорожный на зацеличенном западном борту</td>
+          <td style="color:#C0392B;white-space:nowrap">2026-09-01</td>
+          <td style="white-space:nowrap">Разборов И. / Иванчин Ю.</td>
+        </tr>
+        <tr>
+          <td style="color:#C0392B;font-weight:600"></td>
+          <td>42. Аудит прямых дорог по аэрофотосъемки существующих дорог (совместно с руковод…</td>
+          <td style="color:#C0392B;white-space:nowrap">2026-08-10</td>
+          <td style="white-space:nowrap">Харнетов П. / Цыбульский Ю.</td>
+        </tr>
+        <tr>
+          <td style="color:#C0392B;font-weight:600"></td>
+          <td>23. Внутренний отвал 2026. Методы увеличения вместимости</td>
+          <td style="color:#C0392B;white-space:nowrap">2026-09-03</td>
+          <td style="white-space:nowrap">Овакимян В. / Сакулин М. / Иван Сас</td>
+        </tr>
+        <tr>
+          <td style="color:#C0392B;font-weight:600"></td>
+          <td>12. Строительство дороги на отв. Малый "Струна"</td>
+          <td style="color:#C0392B;white-space:nowrap">2026-09-02</td>
+          <td style="white-space:nowrap">Михайловский В. / Разборов И.</td>
+        </tr></tbody>
+  </table>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <div class="section-title">Задачи по колонкам</div>
+    <div class="chart-wrap"><canvas id="donutChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="section-title">Открытые / закрытые по колонкам</div>
+    <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+  </div>
+</div>
+
+<script>
+const labels    = ["Backlog", "\u0412 \u0440\u0430\u0431\u043e\u0442\u0435", "\u0421\u0434\u0435\u043b\u0430\u043b\u0438 (SPRY)", "\u041d\u0435 \u0440\u0435\u0430\u043b\u0438\u0437\u043e\u0432\u0430\u043d\u043d\u044b\u0435", "\u041f\u0440\u043e\u0442\u043e\u043a\u043e\u043b\u044c\u043d\u044b\u0435"];
+const colOpen   = [9, 10, 0, 0, 0];
+const colClosed = [0, 0, 47, 37, 0];
+const colTotal  = [9, 10, 47, 37, 0];
+const colors    = ["#5B8FF9", "#5AD8A6", "#F6BD16", "#E8684A", "#9B8AFA"];
+
+new Chart(document.getElementById('donutChart'), {
+  type: 'doughnut',
+  data: { labels, datasets: [{ data: colTotal, backgroundColor: colors, borderWidth:2 }] },
+  options: { cutout:'65%', plugins:{ legend:{ position:'right',labels:{font:{size:11},boxWidth:12} } } }
+});
+new Chart(document.getElementById('barChart'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      { label:'Открыто',  data: colOpen,   backgroundColor:'#93C4EE' },
+      { label:'Закрыто',  data: colClosed, backgroundColor:'#7BD4A0' }
+    ]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'top',labels:{font:{size:11},boxWidth:12} } },
+    scales:{ x:{ ticks:{font:{size:10} } }, y:{ beginAtZero:true } }
+  }
+});
+</script>
+</body>
+</html>
